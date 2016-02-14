@@ -1,16 +1,34 @@
 'use strict';
 
 (function () {
-  // Authentication controller Spec
-  describe('AuthenticationService', function () {
-    // Initialize global variables
-    var AuthenticationService,
-      $httpBackend,
-      $stateParams,
-      $state,
-      $location,
-      $q,
-      localStorageService;
+
+  describe('Authentication Service', function () {
+
+    var $rootScope;
+    var $location;
+    var $http;
+    var $httpBackend;
+    var $stateParams;
+    var $state;
+    var $q;
+
+    var token = 'someToken';
+    var user = {
+      _id: '507f191e810c19729de860ea',
+      username: 'Someone'
+    };
+
+    beforeEach(module(ApplicationConfiguration.applicationModuleName));
+
+    beforeEach(inject(function (_$rootScope_, _$location_, _$http_, _$stateParams_, _$httpBackend_, _$state_, _$q_) {
+      $rootScope = _$rootScope_;
+      $location = _$location_;
+      $http = _$http_;
+      $stateParams = _$stateParams_;
+      $httpBackend = _$httpBackend_;
+      $state = _$state_;
+      $q = _$q_;
+    }));
 
     beforeEach(function () {
       jasmine.addMatchers({
@@ -26,125 +44,129 @@
       });
     });
 
-    // Load the main application module
-    beforeEach(module(ApplicationConfiguration.applicationModuleName));
+    describe('Default Injected Service', function () {
 
-    describe('unauthenticated', function () {
-      // The injector ignores leading and trailing underscores here (i.e. _$httpBackend_).
-      // This allows us to inject a service but then attach it to a variable
-      // with the same name as the service.
-      beforeEach(inject(function (_$location_, _$stateParams_, _$httpBackend_, _Authentication_, _$q_) {
+      var Authentication;
 
-        // Point global variables to injected services
-        $stateParams = _$stateParams_;
-        $httpBackend = _$httpBackend_;
-        $location = _$location_;
-        AuthenticationService = _Authentication_;
-        $q = _$q_;
+      beforeEach(inject(function (_Authentication_) {
+        Authentication = _Authentication_;
       }));
 
-      it('should construct the service', inject(function (Authentication) {
-
+      it('should construct the service', function () {
         expect(typeof Authentication.ready).toEqual('object');
         expect(Authentication.ready.then instanceof Function).toBe(true);
-
         expect(Authentication.user).toBe(null);
         expect(Authentication.token).toBe(null);
-
         expect(Authentication.login instanceof Function).toBe(true);
         expect(Authentication.signout instanceof Function).toBe(true);
         expect(Authentication.refresh instanceof Function).toBe(true);
+      });
+    });
 
+    describe('After login()', function () {
+
+      var Authentication;
+      var resolved;
+
+      beforeEach(inject(function (_Authentication_) {
+        Authentication = _Authentication_;
+        Authentication.ready.then(function () {
+          resolved = true;
+        });
+
+        $httpBackend.when(
+          'GET',
+          'api/users/me',
+          undefined,
+          function (headers) {
+            {
+              return headers.Authorization === 'JWT ' + token;
+            }
+          }
+        ).respond(200, '');
+
+        Authentication.login(user, token);
+        $rootScope.$digest();
       }));
 
-      describe('login()', function () {
-        var user = {
-          username: 'Fred'
-        };
-
-	//Currently breaks
-        //Authentication.login(user, 'okiedokie');
-
-        it('should set the service variables', inject(function (Authentication) {
-
-          //expect(Authentication.user.username).toBe('Fred');
-          //expect(Authentication.token).toBe('okiedokie');
-
-        }));
-
-        it('should set the token in local storage', inject(function (Authentication) {
-
-        }));
-
-        it('should set the $http Authorization header', inject(function (Authentication) {
-
-        }));
-
-        it('should resolve the ready promise', inject(function (Authentication) {
-
-        }));
+      it('should set the service variables', function () {
+        expect(Authentication.user.username).toBe(user.username);
+        expect(Authentication.token).toBe(token);
       });
 
-      describe('token on URL', function () {
-        it('should take the token and load the user', inject(function (Authentication) {
-          //This will hit the /api/users/me route to load the user into service.user
-        }));
-
-        it('should remove the token from the URL', inject(function (Authentication) {
-          //This will hit the /api/users/me route to load the user into service.user
-        }));
+      it('should set the token in local storage', function () {
+        var storedToken = localStorage.getItem('token');
+        expect(storedToken).toBe(token);
       });
 
-      describe('token in local storage', function () {
-        it('should take the token and load the user', inject(function (Authentication) {
-          //This will hit the /api/users/me route to load the user into service.user
-        }));
+      it('should set the $http Authorization header', function () {
+        var expected = 'JWT ' + token;
+        expect($http.defaults.headers.common.Authorization).toBe(expected);
       });
 
+      it('should set the $http Authorization header on the http request', function () {
+        Authentication.refresh();
+        $httpBackend.flush();
+      });
 
-
-
-
+      it('should resolve the ready promise', function () {
+        expect(resolved).toBe(true);
+      });
     });
 
-    describe('authenticated', function () {
-
-      describe('refresh()', function () {
-
-        //Currently breaks
-        //Authentication.refresh();
-
-        it('reset the ready promise', inject(function (Authentication) {
-          //This will hit the /api/users/me route to load the user into service.user
-        }));
-
-        it('should take the token and reload the user', inject(function (Authentication) {
-          //This will hit the /api/users/me route to load the user into service.user
-        }));
+    describe('Token on URL', function () {
+      it('should take the token and load the user', function () {
+        //This will hit the /api/users/me route to load the user into service.user
+        //$http.get('/api/users/me/')
       });
 
-      describe('signout()', function () {
-
-        //Currently breaks
-        //Authentication.signout();
-
-        it('should set service variables to null', inject(function (Authentication) {
-          //expect(Authentication.user).toBe(null);
-          //expect(Authentication.token).toBe(null);
-        }));
-
-        it('should remove token from local storage', inject(function (Authentication) {
-
-        }));
-
-        it('should reload the current state', inject(function (Authentication) {
-
-        }));
-        
+      it('should remove the token from the URL', function () {
+        //This will hit the /api/users/me route to load the user into service.user
       });
-
     });
 
+    describe('After refresh()', function () {
 
-  });
-}());
+      var Authentication;
+
+      beforeEach(inject(function (_Authentication_) {
+        Authentication = _Authentication_;
+      }));
+
+      it('reset the ready promise', function () {
+        //This will hit the /api/users/me route to load the user into service.user
+      });
+
+      it('should take the token and reload the user', function () {
+        //This will hit the /api/users/me route to load the user into service.user
+      });
+    });
+
+    describe('After signout()', function () {
+
+      var Authentication;
+
+      beforeEach(inject(function (_Authentication_) {
+        Authentication = _Authentication_;
+        Authentication.login(user, token);
+        Authentication.signout();
+      }));
+
+      it('should set service variables to null', function () {
+        expect(Authentication.user).toBe(null);
+        expect(Authentication.token).toBe(null);
+      });
+
+      it('should remove token from local storage', function () {
+        var storedToken = localStorage.getItem('token');
+        expect(storedToken).toBe(null);
+      });
+
+      it('should reload the current state', function () {
+        $rootScope.$digest();
+        expect($state.is('home')).toBe(true);
+      });
+    });
+
+  }); // End tests
+})();
