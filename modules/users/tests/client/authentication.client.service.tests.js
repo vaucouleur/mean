@@ -61,7 +61,8 @@
         var user = {
           username: 'Fred'
         };
-        //Currently breaks
+
+	//Currently breaks
         //Authentication.login(user, 'okiedokie');
 
         it('should set the service variables', inject(function (Authentication) {
