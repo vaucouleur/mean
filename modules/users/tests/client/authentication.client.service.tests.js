@@ -125,20 +125,41 @@
       });
     });
 
-    describe('After refresh()', function () {
+    describe('refresh()', function () {
 
       var Authentication;
 
       beforeEach(inject(function (_Authentication_) {
         Authentication = _Authentication_;
+        $httpBackend.when(
+          'GET',
+          'api/users/me',
+          undefined,
+          function (headers) {
+            {
+              return headers.Authorization === 'JWT ' + token;
+            }
+          }
+        ).respond(200, '');
+
+        Authentication.login(user, token);
+        $httpBackend.flush();
+        $rootScope.$digest();
       }));
 
-      it('reset the ready promise', function () {
-        //This will hit the /api/users/me route to load the user into service.user
+      it('reset the ready promise', function (done) {
+        Authentication.refresh().finally(done);
+        $httpBackend.flush();
       });
 
-      it('should take the token and reload the user', function () {
-        //This will hit the /api/users/me route to load the user into service.user
+      it('should take the token and reload the user', function (done) {
+        var previousUser = Authentication.user;
+        Authentication.refresh()
+          .then(function() {
+            expect(Authentication.user !== previousUser).toBe(true);
+          })
+          .finally(done);
+        $httpBackend.flush();
       });
     });
 
